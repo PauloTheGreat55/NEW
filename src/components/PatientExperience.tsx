@@ -300,7 +300,7 @@ export const PatientExperience: React.FC<PatientExperienceProps> = ({
                       </span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-2xl font-extrabold text-slate-900">
-                          ${service.price}
+                          ₱{service.price}
                         </span>
                         <span className="text-[11px] text-slate-500">all-inclusive</span>
                       </div>
@@ -346,7 +346,7 @@ export const PatientExperience: React.FC<PatientExperienceProps> = ({
               </h3>
               <p className="text-xs text-slate-600 max-w-xl">
                 We accept Delta Dental, Cigna, MetLife, Guardian, Aetna, Humana, and UnitedHealthcare.
-                If you have dental insurance, your co-pay is often $0 for preventive exams & cleanings.
+                If you have dental insurance, your co-pay may be ₱0 for preventive exams & cleanings.
               </p>
             </div>
 

@@ -25,7 +25,7 @@ import {
   ExternalLink,
   Trash2,
   Edit3,
-  DollarSign,
+  Coins,
   Power,
   Tag,
   X,
@@ -252,7 +252,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setIsEditServiceModalOpen(false);
     loadServicesList();
     window.dispatchEvent(new Event('pearldent:services_updated'));
-    setAdminNotice(`Price updated to $${editPrice} for "${editName}"! Published to public treatments & price.`);
+    setAdminNotice(`Price updated to ₱${editPrice} for "${editName}"! Published to public treatments & price.`);
     setTimeout(() => setAdminNotice(null), 5000);
   };
 
@@ -816,7 +816,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            <DollarSign className="w-4 h-4 text-teal-600" />
+            <Coins className="w-4 h-4 text-teal-600" />
             <span>Services & Prices</span>
             <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.5 rounded">
               ADMIN
@@ -955,7 +955,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               {apt.service?.name || 'General Appointment'}
                             </div>
                             <div className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-1">
-                              <span>${apt.service?.price || 0}</span>
+                              <span>₱{apt.service?.price || 0}</span>
                               <span>·</span>
                               <span>{apt.service?.duration_minutes || 45} mins</span>
                             </div>
@@ -1321,7 +1321,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
             <div>
               <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-teal-600" />
+                <Coins className="w-5 h-5 text-teal-600" />
                 <h2 className="text-base font-bold text-slate-900">
                   Dental Services & Pricing Management
                 </h2>
@@ -1443,7 +1443,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         Published Price
                       </span>
                       <span className="text-xl font-extrabold text-teal-800">
-                        ${service.price}
+                        ₱{service.price}
                       </span>
                     </div>
 
@@ -1584,10 +1584,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Price in USD ($) <span className="text-rose-500">*</span>
+                    Price in PHP (₱) <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-500 font-bold">$</span>
+                    <span className="absolute left-3 top-2 text-slate-500 font-bold">₱</span>
                     <input
                       type="number"
                       step="1"
@@ -1708,10 +1708,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    Price in USD ($) <span className="text-rose-500">*</span>
+                    Price in PHP (₱) <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-slate-500 font-bold">$</span>
+                    <span className="absolute left-3 top-2 text-slate-500 font-bold">₱</span>
                     <input
                       type="number"
                       step="1"

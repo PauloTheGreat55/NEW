@@ -289,7 +289,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <div className="text-right">
                 <span className="text-xs text-slate-600">Standard Fee</span>
                 <p className="text-lg font-bold text-teal-900">
-                  ${confirmedBooking.service?.price}
+                  ₱{confirmedBooking.service?.price}
                 </p>
               </div>
             </div>
@@ -533,7 +533,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                         </span>
                         <div className="flex items-baseline gap-1">
                           <span className="text-lg font-extrabold text-slate-900">
-                            ${service.price}
+                            ₱{service.price}
                           </span>
                           <span className="text-[10px] text-slate-600">flat rate</span>
                         </div>
@@ -883,7 +883,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                     <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedService.name}</p>
                     <div className="flex items-center justify-between text-slate-600 mt-1">
                       <span>{selectedService.duration_minutes} minutes</span>
-                      <span className="font-bold text-teal-700 text-sm">${selectedService.price}</span>
+                      <span className="font-bold text-teal-700 text-sm">₱{selectedService.price}</span>
                     </div>
                   </div>
                 )}
@@ -912,7 +912,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                   <div className="flex justify-between items-center text-sm font-bold text-slate-900">
                     <span>Estimated Total</span>
                     <span className="text-base text-teal-700">
-                      ${selectedService ? selectedService.price : 0}
+                      ₱{selectedService ? selectedService.price : 0}
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-600 mt-1">
