@@ -1,0 +1,6 @@
+{
+  "name": "PearlDent - Dental Clinic Booking System",
+  "description": "Lightweight, production-ready Dental Clinic Booking System with Supabase integration, 3-step patient booking wizard, staff appointment management, and admin staff provisioning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
