@@ -17,7 +17,7 @@ A full-stack dental clinic management system with **SQLite database**, **Express
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
+- **Node.js** 22+ and npm
 
 ### Installation & Running
 
@@ -73,7 +73,7 @@ The database starts without sample patient appointments, dental services, or pri
 
 ## 🔑 Staff Portal Login
 
-Open **Staff & Admin Login** and sign in with a clinic account's email and password. The seeded administrator account is `Paulo@gmail.com`.
+Open **Staff Portal** and sign in with a clinic account's email and password. Local development seeds `Paulo@gmail.com`; production requires a private `ADMIN_PASSWORD` environment variable and does not seed demo staff accounts.
 
 ## 🛠️ Available Scripts
 
@@ -102,14 +102,15 @@ npm run clean        # Remove build artifacts and database
 - DELETE /api/services/:id - Soft-delete service
 
 ### Appointments
-- GET /api/appointments - List all appointments
+- GET /api/appointments - List appointments (staff/admin session required)
+- GET /api/appointments/availability - Public appointment time availability only
 - POST /api/appointments - Create appointment
-- PATCH /api/appointments/:id/status - Update status (triggers email on confirm)
+- PATCH /api/appointments/:id/status - Update status (staff/admin session required)
 
 ### Staff/Profiles
-- GET /api/staff - List staff and admin accounts
-- POST /api/staff - Create staff account
-- POST /api/auth/login - Login (email lookup)
+- GET /api/staff - List staff and admin accounts (admin session required)
+- POST /api/staff - Create staff account (admin session required)
+- POST /api/auth/login - Sign in and receive an expiring bearer token
 
 ## 🎨 Technology Stack
 
@@ -121,9 +122,23 @@ npm run clean        # Remove build artifacts and database
 
 - The database file (`server/pearldent.db`) persists across restarts
 - Email notifications are logged but not actually sent
-- Session management is in-memory (refreshing logs you out)
-- For production use, add proper authentication and password hashing
+- Login sessions are held in memory in the browser; refreshing signs you out
+- Free Render storage is ephemeral; do not store real patient records there
 
 ---
 
 **Built with ❤️ for PearlDent Dental Clinic**
+
+## AI Studio Attribution
+
+<div align="center">
+
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+
+  <h1>Built with AI Studio</h2>
+
+  <p>The fastest path from prompt to production with Gemini.</p>
+
+  <a href="https://aistudio.google.com/apps">Start building</a>
+
+</div>
