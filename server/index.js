@@ -142,10 +142,29 @@ function clearExampleData() {
 
 function seedStaff() {
   const isProduction = process.env.NODE_ENV === 'production';
-  const adminEmail = process.env.ADMIN_EMAIL || 'Paulo@gmail.com';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'Paulo@gmail.com').trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? '' : 'Paulo@gmail.com');
   if (!adminPassword || (isProduction && adminPassword.length < 12)) {
     throw new Error('Set ADMIN_PASSWORD to at least 12 characters before starting in production.');
+  }
+
+  if (isProduction) {
+    const existingAdmin = db.prepare(`
+      SELECT id FROM profiles
+      WHERE role = 'admin' AND (lower(email) = ? OR full_name = 'Paulo (Admin)')
+      ORDER BY created_at ASC LIMIT 1
+    `).get(adminEmail);
+    if (existingAdmin) {
+      db.prepare('UPDATE profiles SET email=?, status=\'active\', password=? WHERE id=?').run(
+        adminEmail,
+        hashPassword(adminPassword),
+        existingAdmin.id
+      );
+    } else {
+      db.prepare('INSERT INTO profiles (id, full_name, email, role, status, password) VALUES (?,?,?,?,?,?)')
+        .run(uuid(), 'Paulo (Admin)', adminEmail, 'admin', 'active', hashPassword(adminPassword));
+    }
+    return;
   }
 
   const staff = [
