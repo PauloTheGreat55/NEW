@@ -490,6 +490,66 @@ function joinedAppointments(rows) {
   }));
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character]);
+}
+
+async function sendApprovalEmail(appointment) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  const service = db.prepare('SELECT name FROM services WHERE id = ?').get(appointment.service_id);
+  const serviceName = service?.name || 'Dental Care';
+  const subject = `Your Dental Visit is Approved: ${serviceName} on ${appointment.appointment_date} at ${appointment.time_slot}`;
+  const bodyText = `Dear ${appointment.patient_name},\n\nYour appointment for ${serviceName} on ${appointment.appointment_date} at ${appointment.time_slot} has been confirmed.\n\nWarm regards,\nPearlDent Clinic`;
+  const bodyHtml = `<p>Dear <strong>${escapeHtml(appointment.patient_name)}</strong>,</p><p>Your appointment for <strong>${escapeHtml(serviceName)}</strong> on ${escapeHtml(appointment.appointment_date)} at ${escapeHtml(appointment.time_slot)} has been confirmed.</p><p>Warm regards,<br>PearlDent Clinic</p>`;
+  const email = {
+    id: uuid(),
+    appointment_id: appointment.id,
+    to_email: appointment.patient_email,
+    patient_name: appointment.patient_name,
+    subject,
+    body_text: bodyText,
+    body_html: bodyHtml,
+    sent_at: new Date().toISOString(),
+    status: 'failed',
+  };
+
+  if (!apiKey || !from) {
+    return { email, emailDispatched: false, error: 'Email is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL in the service environment.' };
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to: [appointment.patient_email], subject, html: bodyHtml, text: bodyText }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { email, emailDispatched: false, error: result.message || `Email provider returned HTTP ${response.status}.` };
+    }
+    return { email: { ...email, status: 'sent' }, emailDispatched: true, providerMessageId: result.id };
+  } catch (error) {
+    console.error('Approval email request failed:', error);
+    return { email, emailDispatched: false, error: 'Could not connect to the email provider.' };
+  }
+}
+
+function saveEmailLog(email) {
+  db.prepare(`
+    INSERT INTO dispatched_emails (id,appointment_id,to_email,patient_name,subject,body_text,body_html,sent_at,status)
+    VALUES (?,?,?,?,?,?,?,?,?)
+  `).run(
+    email.id, email.appointment_id, email.to_email, email.patient_name,
+    email.subject, email.body_text, email.body_html, email.sent_at, email.status
+  );
+}
+
 app.get('/api/appointments/availability', (req, res) => {
   const rows = db.prepare(`
     SELECT appointment_date, time_slot, status
@@ -519,40 +579,49 @@ app.post('/api/appointments', (req, res) => {
   res.json(joinedAppointments([row])[0]);
 });
 
-app.patch('/api/appointments/:id/status', requireAuth, requireRole('admin', 'staff'), (req, res) => {
+app.patch('/api/appointments/:id/status', requireAuth, requireRole('admin', 'staff'), async (req, res) => {
   const { status } = req.body;
+  if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid appointment status.' });
+  }
   const apt = db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
   if (!apt) return res.status(404).json({ error: 'Not found' });
 
   let emailDispatched = false;
   let emailRecord = null;
+  let emailError;
 
   if (status === 'confirmed' && !apt.email_sent) {
-    // Build a simple email log entry
-    const svc = db.prepare('SELECT * FROM services WHERE id = ?').get(apt.service_id);
-    const svcName = svc?.name || 'Dental Care';
-    emailRecord = {
-      id: uuid(),
-      appointment_id: apt.id,
-      to_email: apt.patient_email,
-      patient_name: apt.patient_name,
-      subject: `Your Dental Visit is Approved: ${svcName} on ${apt.appointment_date} at ${apt.time_slot}`,
-      body_text: `Dear ${apt.patient_name},\n\nYour appointment for ${svcName} on ${apt.appointment_date} at ${apt.time_slot} has been confirmed.\n\nWarm regards,\nPearlDent Clinic`,
-      body_html: `<p>Dear <strong>${apt.patient_name}</strong>,</p><p>Your appointment for <strong>${svcName}</strong> on <strong>${apt.appointment_date}</strong> at <strong>${apt.time_slot}</strong> has been confirmed.</p><p>Warm regards,<br/>PearlDent Clinic</p>`,
-      sent_at: new Date().toISOString(),
-      status: 'delivered',
-    };
-    db.prepare(`INSERT INTO dispatched_emails (id,appointment_id,to_email,patient_name,subject,body_text,body_html,sent_at,status) VALUES (?,?,?,?,?,?,?,?,?)`).run(
-      emailRecord.id, emailRecord.appointment_id, emailRecord.to_email, emailRecord.patient_name,
-      emailRecord.subject, emailRecord.body_text, emailRecord.body_html, emailRecord.sent_at, emailRecord.status
-    );
-    db.prepare("UPDATE appointments SET status=?, email_sent=1, email_sent_at=? WHERE id=?").run(status, emailRecord.sent_at, req.params.id);
-    emailDispatched = true;
+    const result = await sendApprovalEmail(apt);
+    emailRecord = result.email;
+    emailDispatched = result.emailDispatched;
+    emailError = result.error;
+    saveEmailLog(emailRecord);
+    if (emailDispatched) {
+      db.prepare('UPDATE appointments SET status=?, email_sent=1, email_sent_at=? WHERE id=?')
+        .run(status, emailRecord.sent_at, req.params.id);
+    } else {
+      db.prepare('UPDATE appointments SET status=? WHERE id=?').run(status, req.params.id);
+    }
   } else {
     db.prepare("UPDATE appointments SET status=? WHERE id=?").run(status, req.params.id);
   }
 
-  res.json({ success: true, emailDispatched, email: emailRecord });
+  res.json({ success: true, emailDispatched, email: emailRecord, emailError });
+});
+
+app.post('/api/appointments/:id/approval-email/resend', requireAuth, requireRole('admin', 'staff'), async (req, res) => {
+  const appointment = db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
+  if (!appointment) return res.status(404).json({ error: 'Appointment not found.' });
+  if (appointment.status !== 'confirmed') return res.status(409).json({ error: 'Only approved appointments can receive a confirmation email.' });
+
+  const result = await sendApprovalEmail(appointment);
+  saveEmailLog(result.email);
+  if (result.emailDispatched) {
+    db.prepare('UPDATE appointments SET email_sent=1, email_sent_at=? WHERE id=?')
+      .run(result.email.sent_at, appointment.id);
+  }
+  res.json({ success: result.emailDispatched, emailDispatched: result.emailDispatched, email: result.email, emailError: result.error });
 });
 
 app.patch('/api/appointments/:id/attachment', requireAuth, requireRole('admin', 'staff'), (req, res) => {

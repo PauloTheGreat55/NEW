@@ -121,9 +121,10 @@ npm run clean        # Remove build artifacts and database
 ## 📝 Notes
 
 - The database file (`server/pearldent.db`) persists across restarts
-- Email notifications are logged but not actually sent
+- Approval emails are logged and sent through Resend when configured
 - Login sessions are held in memory in the browser; refreshing signs you out
 - Free Render storage is ephemeral; do not store real patient records there
+- Approval emails send through Resend after an authenticated staff/admin confirmation. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Render; the sender domain must be verified with Resend.
 
 ---
 

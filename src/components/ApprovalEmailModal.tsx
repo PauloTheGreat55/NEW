@@ -6,7 +6,7 @@ interface ApprovalEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   email: DispatchedEmail | null;
-  onResend?: (email: DispatchedEmail) => void;
+  onResend?: (email: DispatchedEmail) => Promise<boolean>;
 }
 
 export const ApprovalEmailModal: React.FC<ApprovalEmailModalProps> = ({
@@ -19,6 +19,7 @@ export const ApprovalEmailModal: React.FC<ApprovalEmailModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState('');
 
   if (!isOpen || !email) return null;
 
@@ -28,14 +29,23 @@ export const ApprovalEmailModal: React.FC<ApprovalEmailModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setIsResending(true);
-    setTimeout(() => {
-      setIsResending(false);
+    setResendError('');
+    setResendSuccess(false);
+    try {
+      const sent = onResend ? await onResend(email) : false;
+      if (!sent) {
+        setResendError('Email was not sent. Check the email settings and try again.');
+        return;
+      }
       setResendSuccess(true);
-      if (onResend) onResend(email);
-      setTimeout(() => setResendSuccess(false), 2500);
-    }, 600);
+      setTimeout(() => setResendSuccess(false), 3000);
+    } catch {
+      setResendError('Email could not be sent. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const mailtoUrl = `mailto:${encodeURIComponent(email.to_email)}?subject=${encodeURIComponent(
@@ -56,13 +66,17 @@ export const ApprovalEmailModal: React.FC<ApprovalEmailModalProps> = ({
                 <h2 className="text-base font-bold text-slate-900">
                   Staff Approval Confirmation Email
                 </h2>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Delivered to Patient</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    email.status === 'sent'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>{email.status === 'sent' ? 'Sent by email provider' : 'Not sent'}</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Dispatched automatically when staff approved the appointment
+                Sent automatically when staff approved the appointment
               </p>
             </div>
           </div>
@@ -205,9 +219,10 @@ export const ApprovalEmailModal: React.FC<ApprovalEmailModalProps> = ({
           <div className="text-xs">
             {resendSuccess && (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Approval email re-dispatched to {email.to_email}!
+                <CheckCircle2 className="w-3.5 h-3.5" /> Email accepted for sending to {email.to_email}.
               </span>
             )}
+            {resendError && <span role="alert" className="text-rose-700 font-semibold">{resendError}</span>}
           </div>
 
           <div className="flex gap-2">

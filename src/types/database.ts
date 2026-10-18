@@ -59,7 +59,7 @@ export interface DispatchedEmail {
   body_text: string;
   body_html: string;
   sent_at: string;
-  status: 'sent' | 'delivered';
+  status: 'sent' | 'delivered' | 'failed';
 }
 
 export interface NewAppointmentInput {

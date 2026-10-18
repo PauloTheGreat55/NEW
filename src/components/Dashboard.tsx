@@ -43,6 +43,7 @@ import {
   getDispatchedEmails,
   generateApprovalEmail,
   fetchServices,
+  resendApprovalEmail,
   fetchCategories,
   addCategory,
   updateCategory,
@@ -384,6 +385,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setUpdatingId(appointmentId);
     try {
       const result = await updateAppointmentStatus(appointmentId, newStatus);
+      if (!result.success) {
+        setAdminNotice(result.error || 'Could not update this appointment.');
+        setTimeout(() => setAdminNotice(null), 5000);
+        return;
+      }
+      const previousAppointment = appointments.find((appointment) => appointment.id === appointmentId);
       // update state locally
       setAppointments((prev) =>
         prev.map((apt) =>
@@ -391,9 +398,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             ? {
                 ...apt,
                 status: newStatus,
-                email_sent: newStatus === 'confirmed' ? true : apt.email_sent,
+                email_sent: newStatus === 'confirmed' ? Boolean(result.emailDispatched || apt.email_sent) : apt.email_sent,
                 email_sent_at:
-                  newStatus === 'confirmed'
+                  newStatus === 'confirmed' && result.emailDispatched
                     ? new Date().toISOString()
                     : apt.email_sent_at,
               }
@@ -410,6 +417,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           appointmentId,
         });
         setTimeout(() => setEmailToast(null), 8000);
+      } else if (newStatus === 'confirmed' && !previousAppointment?.email_sent) {
+        setAdminNotice(result.emailError || 'Appointment approved, but the confirmation email was not sent. Check email configuration and retry.');
+        setTimeout(() => setAdminNotice(null), 6000);
       }
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -1783,7 +1793,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
         email={selectedEmail}
-        onResend={() => loadAppointments()}
+        onResend={async (email) => {
+          const result = await resendApprovalEmail(email.appointment_id);
+          if (!result.emailDispatched) {
+            setAdminNotice(result.emailError || result.error || 'Could not send the approval email.');
+            setTimeout(() => setAdminNotice(null), 6000);
+            return false;
+          }
+          if (result.email) setSelectedEmail(result.email);
+          await loadAppointments();
+          return true;
+        }}
       />
 
     </div>

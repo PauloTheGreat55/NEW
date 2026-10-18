@@ -216,13 +216,23 @@ export const createAppointment = async (
 export const updateAppointmentStatus = async (
   appointmentId: string,
   newStatus: AppointmentStatus
-): Promise<{ success: boolean; emailDispatched?: boolean; email?: DispatchedEmail; error?: string }> => {
+): Promise<{ success: boolean; emailDispatched?: boolean; email?: DispatchedEmail; emailError?: string; error?: string }> => {
   try {
-    const result = await apiFetch<{ success: boolean; emailDispatched: boolean; email?: DispatchedEmail }>(
+    const result = await apiFetch<{ success: boolean; emailDispatched: boolean; email?: DispatchedEmail; emailError?: string }>(
       `/appointments/${appointmentId}/status`,
       { method: 'PATCH', body: JSON.stringify({ status: newStatus }) }
     );
     return result;
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+};
+
+export const resendApprovalEmail = async (
+  appointmentId: string
+): Promise<{ success: boolean; emailDispatched?: boolean; email?: DispatchedEmail; emailError?: string; error?: string }> => {
+  try {
+    return await apiFetch(`/appointments/${appointmentId}/approval-email/resend`, { method: 'POST' });
   } catch (e: any) {
     return { success: false, error: e.message };
   }
@@ -343,7 +353,7 @@ export const generateApprovalEmail = (appointment: Appointment): DispatchedEmail
   body_text: `Dear ${appointment.patient_name}, your appointment has been confirmed.`,
   body_html: `<p>Dear ${appointment.patient_name}, your appointment has been confirmed.</p>`,
   sent_at: new Date().toISOString(),
-  status: 'delivered',
+  status: 'failed',
 });
 
 // ── Local storage stubs (kept for import compatibility) ───────────────────────
